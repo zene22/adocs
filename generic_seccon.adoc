@@ -1,0 +1,273 @@
+= Securing Containers with Openshift - Some Challenges
+
+Security in a containerized environment should be continuous and integrated throughout the IT lifecycle. 
+
+.Secure IT Lifecycle
+image::secure-lifecycle.png[title="Secure IT Lifecycle", scaledwidth="50%"]
+
+This means that already during the design phase security requirements will be identified and evaluated in accordance with rules originating from a governance model.
+This enables developers for a built-in security in contrast to bolted-on security if these requirements enter the lifecycle at a later phase.
+Running the applications ask for trusted platforms with enhanced security capabilites.
+All management of the systems for security and compliance should be automated to be successful. As the landscape changes, an organizational process of revise - update - remediate is needed to adapt the systems.
+
+Securing containers throughout the major layers of an enterprise container solution can be broken down into three manageable buckets: The **control** of the security of containerized applications, the **defense** of container platform infrastructure,
+and the **extension** of the security of the overall solution by leveraging tools from the broader security ecosystem.
+
+.Control Defend Extend
+image::control-defend-extend.png[title="Control Defend Extend", scaledwidth="30%"]
+
+Managing security is a continuous process. As applications are deployed or updated, it’s critical to provide dynamic
+security controls to keep the business safe. Organizations need a platform that enables a software supply chain with
+security controls built-in and enables the development and operations teams to defend and extend their application
+platform throughout the complete application life cycle without reducing developer productivity.
+
+For {ocp} 4.x there are extensive guides and applicability documents present or planned to help customers like
+
+- The https://access.redhat.com/articles/5059881[Openshift Security Guide]
+- The https://www.redhat.com/cms/managed-files/ve-openshift-hippa-coalfire-analyst-materal-f23549-202005-en.pdf[applicability document for Health Insurance Portability and Accountability Act (HIPAA) compliance]
+- The applicability document for HITRUST compliance is planned Q4 2020
+- The applicability document for FISMA compliance is planned Q4 2020
+- The applicability document for ISO 27001 compliance is planned Q4 2020
+- The applicability document for PCI-DSS compliance is planned Q1 2021
+- The CIS OpenShift Benchmark document is planned Q1 2021
+
+In this document we try to describe some of the challenges we met in the area of controlling the security of the applications and possible answers to these challenges.
+
+== Challenges
+
+From the triad of control - defend - extend, in this document we examine aspects of **control** and operation (**extend**) that require embedding the {ocp} in an existing process and tool landscape.
+
+=== Control
+
+In most companies we encounter a sort of standard setup in development of applications. For most of the security aware enterprise customers development is separated from production in terms of staged environments with different security levels. On development the levels are lower than in production near environments, still a secure path to promote applications through the stages is provided. Most customers try to apply agile principles to their development, thus implementing continous integration in the development stage and (more or less) continuous deployment when promoting the applications through the stages up to production. Automating the process also for deployments up to and including production is the key for enabling security for operating the applications. This does not mean that developers will trigger deployments to production, manual approval steps will be implemented as needed by the enterprise governance models.
+
+.Standard Setup
+image::standard-setup.png[title="Standard Setup", scaledwidth="80%"]
+
+The above picture shows the standard setup in such a case. Let's quickly walk through that picture, as it already addresses some of the security concerns.
+
+There are several things organizations can be doing to take control of container security, some before application development even begins. First, make sure to start with trusted content. Applications typically include many open source components, such as the Linux operating system, Apache Web Server, JBoss Enterprise Application Platform and Node.js. Containerized versions of these packages are readily available, so that you don’t have to build your own. But, as with any code you download from an external source, you need to know where the packages originally came from, who built them and whether there’s any malicious code inside them. Use certified images that are maintained and updated when new security vulnerabilities are discovered.
+
+Next to consider is that your teams are building containers that layer content on top of the public container images you download. You need to manage access to —and promotion of— the downloaded container images and the internally built images in the same way you manage other types of binaries. There are a number of private registries that support storage of container images, so selecting a private registry that helps you automate policies for the use of container images stored in the registry is the safest bet.
+
+The CI/CD pipeline is at the core of a secure software supply chain. Organizations need to remember to build in security gates to ensure that as processes are automated, they are using the most up to date versions before updates are implemented.
+
+In the above picture the private registry is a registry in JFrogs Artifactory, the version control system for the developers is a git repository and the CI is based on Jenkins, still quite a popular approach.
+
+=== Extend
+
+It is also necessary to extend the Kubernetes deployment with a broad ecosystem of security tools, such as PAM solutions, external vaults, web application firewalls (WAF) and SIEM systems, through standard interfaces and APIs. {ocp} provides a wide network of partners whose solutions are certified as secure and compliant. Custom connections to tools {cust} is already using or is planning to use have to be setup.
+
+This all has to fit into the governance model for {cust}. Several departments have to work together. The organizations as a whole has to continuously monitor their systems, networks, and software to mitigate the risks arising from malicious actors evolving their methodologies. Common vulnerability and exposures (CVE) are one way that organizations can track security issues across divergent software, network, and systems to gain a holistic view of their cybersecurity risks. {cust} needs to continuously monitor their ecosystems for CVE and apply security patch updates to reduce the risks arising from these vulnerabilities.
+
+There are two key factors that are necessary for successful risk management in case of CVEs for the {ocp}. On the one hand, this is an efficient method of mapping CVEs to the software used, and on the other hand, processes that are as automated as possible in order to quickly patch or replace affected software without failure.
+
+=== Our Findings
+
+What are challenges we are facing with this scenario? Here are some of them, you might even experience more than these.
+
+.Artifactory can be a bottleneck
+WARNING:  In most cases the Artifactory is not highly available. So what can be done to have a secure way to ensure that Artifactory is not the single point of failure for the deployment processes? What if a security path has to be deployed but Artifactory is down? With {ocp} 3.x updates customers have reported, that Artifactory was not able to handle all the parallel pulls when literally dozens of nodes were pulling their new images. Support by Artifactory itself didn't prove helpful in this case.
+
+
+.External Images not Coming from Trusted Sources
+WARNING:  Trying to reduce access only to trusted sources sounds like a inevitable foundation for secure applications. But is this
+enforceable in reality? Even the standard operators in the OpenShift Marketplace like ArgoCD or others ask for images
+from docker.hub, which is not known as a prime example of a secure source. Not all code is developed in-house, we must
+expect images delivered by suppliers to be run in our environments. Why should these images be trusted in advance?
+
+.Isolated networks
+WARNING:  Security demands are the often mentioned reason why access to "the internet" is forbidden in enterprise environments.
+This may even lead to totally disconnected installation even in the development stage. In this case, trusted sources
+will always be private to the enterprise, as no other access is granted. Other customers offer more or less transparent
+proxies to external sources, but this may even lead to more difficulties if tha path of communications is somehow
+intercepted by the proxy. This could be by a plain whitelist where some resources will be accessible, other wont. Or
+through on demand security scanning of the content that the proxy delivers.
+
+.Moving tags for images
+WARNING:  To have reproducible results in deployments it is good practice to use tags for those images. If no tag is specified,
+the ":latest" tag is always implied. This is the prototype of a moving tag, which means that you can never be sure
+that the :latest image tomorrow will be the same as today. And there goes the reproducability. It is possible in
+Artifactory to forbid the rewrite of tags, but during development this might be expected by the developers and not
+re-using the tags could lead to massive disc consumption if old images are not pruned in time.
+
+.Malicious Images through CI
+WARNING:  Controlling the external sources to the private repository is only on side of the medal. On the other hand
+developers are using the CI processes to also push their built images to the repository. Who can tell that
+there is no malicios code inserted by some external dependencies integrated in the application? This has definitely to
+e investigated, though of course I would guess that the security demands leading to an isolated network would try to
+prevent this.
+
+.Reaction to new CVEs
+WARNING:  Once having deployed an application you still have to constantly monitor upcoming CVEs and whether your application
+is affected. How can this be done efficiently without overloading the network? How will you react once an application
+is identified as being affected by a CVE? Ideas like putting agents in every container or node are bad patterns in a containerized world and strongly discouraged. This will severly impact performance and flexibility and also break into the secure layers of the already hardened appliances that {ocp} runs on. Also ideas like continuos scanning of all artefacts in the Artifactory is not the efficient way to reach the goal.
+
+== Setup for Development
+
+We tried to follow good practices in setting up the environment and the guidelines for {ocp}. Here are some of them:
+
+- Use trusted sources for external content
+- Use a private registry to manage images
+- CI/CD must have security gates 
+- Apply runtime security policies
+- Rebuild and redeploy - never patch a running container
+
+=== Trusted Sources
+
+We assume at some point, that Red Hat provides a proper way to offer trusted sources for the software. This is one of the reasons why we install on the {ocp} and not on a plain k8s cluster. 
+
+.Red Hat Container Catalogue
+image::container-catalogue.png[title="Red Hat Container Catalogue"]
+
+We will need external packages to build an applications. These days applications typically include open source components, such as the Linux operating system, Apache Web Server, JBoss Enterprise Application Platform, PostgreSQL, and Node.js. Containerized versions of these packages are readily available, so that they don’t have to be built again. 
+ 
+Red Hat provides a large number of certified images, including RHEL base images as well as various language runtimes, middleware, databases and more via the Red Hat Container Catalog. Container image content is packaged from known source code. And Red Hat also provides security monitoring. 
+
+The Red Hat Container Catalog includes the Container Health Index. Red Hat exposes the “grade” of each container image. Containers are graded based in part on the age and impact of unapplied security errata to all components of a container, providing an aggregate rating of just how safe a container is that can be understood by security experts and non-experts alike. You can find https://access.redhat.com/articles/2803031[more about the Health Index] here.
+
+When Red Hat releases security updates–such as fixes to glibc, Drown, or Dirty Cow – they also rebuild their container images and push them to the public registry. Red Hat Security Advisories alert you to any newly discovered issues in certified container images and direct you to the updated image so that you can, in turn, update any applications that use the image.
+
+So in the end we configured the Image policy in the development cluster with following whitelist for allowedRegistries
+
+- \*.artifactory.acme.com
+- quay.io
+- registry.redhat.io
+- registry.access.redhat.com
+
+The quay.io registry disturbs the whole picture. We still think it should not be there, as it is not a Red Hat registry, but as any Updates to the cluster rely on this registry it turned out to be too much trouble to mirror all images for each and every update. The most important registry is of course the private registry in artifactory. 
+
+This is also our answer to the challenge of "External Images not Coming from Trusted Sources". We experienced this for example with a redis image needed for ArgoCD. So we did a download of this image, executed a security scan, documented the results and got an internal approval for this package. This was then pushed to the internal {ocp} registry. It should go to the private registry of the artifactory though to be on the safe side.
+
+=== Performance
+
+Knowing that Artifactory might become the bottleneck we setup the internal {ocp} registry as a caching registry.
+
+.Manifest for caching registry
+```
+apiVersion: config.openshift.io/v1
+kind: Image
+metadata:
+  name: cluster
+spec:
+  allowedRegistriesForImport:
+      # TODO add certificate
+    - domainName: '*.artifactory.acme.com'
+    - domainName: quay.io
+    - domainName: registry.redhat.io
+    - domainName: registry.access.redhat.com
+  registrySources:
+    insecureRegistries:
+      - registry1.artifactory.acme.com
+      - registry2.artifactory.acme.com
+      - registry3.artifactory.acme.com
+    allowedRegistries:
+      - quay.io
+      - registry.access.redhat.com
+      - registry.redhat.io
+      - 'image-registry.openshift-image-registry.svc:5000'
+      - registry1.artifactory.acme.com
+      - registry2.artifactory.acme.com
+      - registry3.artifactory.acme.com
+```
+
+Beside the above mentioned whitelist for registries to have images imported to the internal registry, the ImagePullPolicy has to match. There are three possible values for this:
+
+- `IfNotPresent`
+- `Always`
+- `Never`
+
+"`IfNotPresent`" is the correct policy, which will only pull the image if it is not present on the node. If available the image of the node will be used. This can be defined separately for each DaemonSet, Deployment and the like.
+
+Having "moving tags" you will have to use the ImagePullPolicy "Always" to be sure to work with the correct version of the image. If this is used for development different a configuration will be necessary for production to maintain repeatable results there.
+
+We suggest the following setup for Artifactory, to ensure a safe and secure processes moving applications to production:
+
+Prod Repository:: Establish one Release Repository in Artifactory. Configure Artifactory to not rewrite or delete tags in this repository. This will be the only trusted source in the production oder production like environments.
+
+Dev Repository:: Establish a Development Repository in Artifactory. You may configure Artifactory to rewrite or delete tags in this repository. This repository must not be used as trusted source in the production oder production like environments. Alternatively to moving tags there are other possibilities of setting tags for development in conjunction with a proper pruning strategy and automated pipelines for development. In general this only works if the developers do not have their own setup of all application contents.
+
+A schema for development could be of the following form:
+
+.Schema for CI/CD Pipelines
+image::pipeline-schema.png[title="Schema for CI/CD Pipelines"]
+
+All listed products are just suggestions to give an idea of the ecosystem that is addressed with the **Extend** point mentioned above. The pipeline is two-fold, the second part of the pipeline with security scans and further automated integration testing only comes in place if the product increment is regarded as a release candidate. This is in most cases a manual process which means that there are at least two pipelines. Please notice that deployments to developer or test instances that are triggered by the pipeline are not included in the schematic picture above.
+
+== Operations
+
+The different staging areas are connected with ever increasing security levels from development to production. So the security requirements for operating a productive system are more crucial than those for the development systems. The impact of having a non scanned or insecure image in development is far less than having such an image in production. Continuous security scans are one of the means to mitigate this risk. This can be done in a resource-efficient manner as described below.
+
+=== Security Scans
+
+With the above mentioned separation between developer repository and release repository a constant scan will only be necessary on the release repository. Promoting an image as a release candidate from the development to the release repository will need security gate, only approved images can enter the release repository. This is a more feasible approach than scanning the whole of Artifactory with all images in there. This approach turned out to be far too time and resource consuming.
+
+In case of CVEs occurring for the trusted repositories we offer a script that regularly scans all pods for the used images. This is fed to the security department, so action can be taken as soon as the pods are identified. This will offer an alternative to having an agent on the nodes oder even pods of a cluster to scan the images there. The automated CI/CD processes can then timely update the application in question, once manual approvement for promotion into production is granted.
+
+.Script to generate the image report
+```
+#!/bin/bash
+set -e
+
+# Check if logged in
+oc status > /dev/null 2>&1
+if [[ $? -ne 0 ]]; then
+    oc login
+    if [[ $? -ne 0 ]]; then
+        echo "Please login to an OpenShift Cluster" > /dev/stderr
+        exit 1
+    fi
+fi
+
+acl=$(oc auth can-i get nodes --all-namespaces)
+if [[ "${acl}" == "no" ]]; then
+    echo "You need at least cluster reader privileges" > /dev/stderr
+    exit 2
+fi
+
+
+echo "----------OCP VERSION----------"
+oc version
+echo
+echo
+
+echo "----------OCP API ADDRESS----------"
+oc whoami --show-server
+echo
+echo
+
+echo "----------OCP NODE LIST----------"
+oc get nodes -o wide
+echo
+echo
+
+echo "----------OCP POD LIST----------"
+# Print format header
+echo "Namespace,Service,Pod Name,Container...,"
+
+# Read all namespaces
+namespaces=$(oc get namespaces -o 'jsonpath={.items[*].metadata.name}')
+for ns in ${namespaces}; do
+    # Read all services
+    services=$(oc get services -n "${ns}" -o 'jsonpath={.items[*].metadata.name}')
+    for svc in ${services}; do
+        # Read pod selector
+        selector=$(oc get svc -n "${ns}" -o 'go-template={{range $key, $value := .spec.selector}}{{$key}}={{$value}},{{end}}' "${svc}")
+        selector="${selector%,}"
+        if [[ -z "${selector}" ]]; then
+            # Service has no pods (used for cluster service like kubernetes API)
+            echo "${ns},${svc},no pods,"
+        else
+            # Read pods matching the selector
+            pods=$(oc get pods -n "${ns}" -l "${selector}" -o='go-template={{range .items}}{{.metadata.name}},{{range .status.initContainerStatuses}}{{.imageID}},{{end}}{{range .status.containerStatuses}}{{.imageID}},{{end}}{{println}}{{end}}')
+            for pod in ${pods}; do
+                echo "${ns},${svc},${pod}"
+            done
+        fi
+    done
+done
+```
+
+
+
+

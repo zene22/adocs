@@ -1,0 +1,81 @@
+= {subject}: PREPARED FOR - {customer}
+// insert your name here
+Andreas Furbach
+// Insert the subject here
+:subject: OpenShift Securing Containers
+:keywords: openshift
+:lang: en
+:description: Good Practices for Secured Containers at {cust}
+:doctype: book
+:confidentiality: Confidential
+// Customer full name and short name if applicable
+:customer: ##TODO Customer Name##
+:cust: ##TODO Customer Short Name##
+:department: ##TODO Department##
+// if known, insert name on RH portal ..
+:custgss:
+// and number.. (gss= global support services (old name))
+:nogss:
+:basedir: {ej-base-dir}
+:listing-caption: Listing
+:blocks: {ej-base-dir}/blocks
+:imagesdir: images
+:icons: font
+:appendix-caption: Appendix
+:sectnums:
+:toc:
+:toclevels: 3
+:sectnumlevels: 6
+:numbered:
+:chapter-label:
+:pdf-page-size: A4
+:pdf-style: redhat
+:pdf-stylesdir: {ej-base-dir}/styles
+:pdf-fontsdir: {ej-base-dir}/fonts
+ifdef::backend-pdf[]
+:pygments-style: tango
+:source-highlighter: rouge
+endif::[]
+//shortnames
+:rh: Red Hat
+:sat: Satellite
+:sat62: {sat} 6.2
+:sat63: {sat} 6.3
+:sat64: {sat} 6.4
+:sat65: {sat} 6.5
+:sat66: {sat} 6.6
+:rhsat: {rh} {sat}
+:idm: Identity Management
+:osp: OpenStack Platform
+:os: OpenShift
+:ceph: Ceph Storage
+:cf: CloudForms
+:idm: Identity Management
+:ans: Ansible
+:pb: Ansible Playbook
+:vm: Virtual Machine
+:pam: Process Automation Manager
+:ocp: {os} Container Platform
+:ipa: {rh} {idm}
+:rhds: {rh} Directory Server
+:rhel: {rh} Enterprise Linux
+:twr: {rh} {ans} Tower
+:rhidm: {rh} {idm}
+:rhpam: {rh} {pam}
+:rhocp: {rh} {ocp}
+// insert version
+:revnumber: 0.2
+:revdate: 2020-10-28
+// name and mail, if you like
+:me: Andreas Furbach
+:memail: <afurbach@redhat.com>
+
+ifdef::backend-pdf[]
+
+include::generic/00-preface.adoc[]
+
+include::05-version-history-seccon.adoc[]
+
+include::generic_seccon.adoc[leveloffset=+1]
+
+endif::[]

@@ -1,0 +1,21 @@
+== History and Revisions
+
+.Version history
+[cols=4,cols="1,2,3,4",options=header,width=90%]
+|===
+|Version
+|Date
+|Authors
+|Changes
+
+|0.1
+|2020-10-27
+|{me}
+|This version, initial.
+
+|{revnumber}
+|{docdate}
+|Tobias Derksen
+|Review, Changes to structure and Operations/Scanning.
+
+|===
